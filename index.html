@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>TradingView Capture</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root{
+      --bg:#0b0e13; --panel:#0f1520; --elev:#111927;
+      --stroke:#1b2533; --muted:#8b93a7; --text:#e7ebf3;
+      --brand:#6e9bff; --brand2:#5ad1b8;
+      --r-lg:16px; --r-md:12px;
+      --shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    @media (prefers-color-scheme:light){
+      :root{
+        --bg:#f6f8fb; --panel:#ffffff; --elev:#ffffff;
+        --stroke:#e5e9f0; --muted:#667089; --text:#0e1420;
+        --shadow:0 10px 30px rgba(0,0,0,.08);
+      }
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:
+        radial-gradient(900px 520px at -10% -10%, rgba(110,155,255,.14), transparent),
+        radial-gradient(900px 520px at 110% 0%,  rgba(90,209,184,.10), transparent),
+        var(--bg);
+      color:var(--text);
+      font:15px/1.5 ui-sans-serif, system-ui, -apple-system, Inter, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:960px;margin:0 auto;padding:24px 16px 64px}
+
+    header{position:sticky;top:0;z-index:10;padding:14px 0 8px;background:linear-gradient(to bottom, rgba(0,0,0,.18), transparent);backdrop-filter:saturate(140%) blur(10px)}
+    .brand{display:flex;align-items:center;gap:12px;padding:0 6px}
+    .logo{width:36px;height:36px;border-radius:12px;background:conic-gradient(from 160deg, var(--brand), var(--brand2));box-shadow:inset 0 0 0 4px rgba(255,255,255,.06)}
+    .title{font-weight:900;letter-spacing:.2px;margin:0;font-size:clamp(22px,4.2vw,28px);background:linear-gradient(90deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .topbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 6px 0}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,var(--panel),var(--elev));border:1px solid var(--stroke);box-shadow:var(--shadow);font-weight:700;font-size:13px;color:var(--muted);text-decoration:none}
+    .dot{width:8px;height:8px;border-radius:50%;background:#999;box-shadow:0 0 10px currentColor}
+    .ok{background:#5ad1b8}.bad{background:#ff5a64}
+
+    .card{margin:16px 6px;padding:18px;border-radius:var(--r-lg);background:linear-gradient(180deg,var(--panel),var(--elev));border:1px solid var(--stroke);box-shadow:var(--shadow)}
+    h3{margin:0 0 10px;font-size:15px;letter-spacing:.2px}
+    .muted{color:var(--muted)}
+    .hr{height:1px;background:linear-gradient(90deg,transparent,var(--stroke),transparent);margin:12px 0}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{user-select:none;text-decoration:none;color:var(--text);font-weight:800;background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.06));border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow);display:inline-flex;gap:8px;align-items:center;transition:transform .06s ease}
+    .chip:active{transform:scale(.985)}
+    .chip .dot{background:radial-gradient(circle at 30% 30%, var(--brand2), var(--brand));box-shadow:0 0 10px var(--brand)}
+
+    .seg{display:inline-flex;background:rgba(255,255,255,.05);border:1px solid var(--stroke);border-radius:12px;padding:4px;gap:4px}
+    .seg button{appearance:none;border:0;cursor:pointer;border-radius:10px;padding:8px 12px;font-weight:800;color:var(--muted);background:transparent;transition:transform .06s ease, background .2s ease, color .2s ease}
+    .seg [aria-pressed="true"]{background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 6px 16px rgba(0,0,0,.25)}
+    .seg button:active{transform:scale(.98)}
+
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px;margin-top:12px}
+    @media (max-width:720px){.grid{grid-template-columns:1fr}}
+    label{display:block;font-size:13px;font-weight:800;margin:6px 2px}
+    input,select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--stroke);background:rgba(255,255,255,.06);color:var(--text);font-weight:700;outline:none}
+    input:focus,select:focus{border-color:rgba(110,155,255,.7);box-shadow:0 0 0 4px rgba(110,155,255,.15)}
+
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .btn{appearance:none;border:1px solid var(--stroke);cursor:pointer;text-decoration:none;padding:12px 14px;border-radius:14px;font-weight:900;letter-spacing:.2px;color:#fff;background:linear-gradient(180deg,var(--brand),#4a7bf9);box-shadow:0 12px 28px rgba(110,155,255,.35);display:inline-flex;align-items:center;gap:8px;transition:transform .06s ease}
+    .btn:active{transform:scale(.985)}
+    .btn.ghost{background:transparent;color:var(--text)}
+    .btn.sec{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));color:var(--text)}
+
+    .code{background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.25));border:1px solid var(--stroke);border-radius:12px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:#d1d7e3;overflow:auto;white-space:nowrap}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <h1 class="title">TradingView Capture</h1>
+      </div>
+      <div class="topbar">
+        <span class="pill" id="healthPill"><span class="dot"></span> Đang kiểm tra…</span>
+        <a class="pill" href="/health" target="_blank" rel="noopener">/health</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h3>Nhanh</h3>
+      <div class="chips">
+        <a class="chip" href="/capture?tf=M15" target="_blank" rel="noopener"><span class="dot"></span>M15</a>
+        <a class="chip" href="/capture?tf=H1"  target="_blank" rel="noopener"><span class="dot"></span>H1</a>
+        <a class="chip" href="/capture?tf=H4"  target="_blank" rel="noopener"><span class="dot"></span>H4</a>
+        <a class="chip" href="/capture?tf=D"   target="_blank" rel="noopener"><span class="dot"></span>D1</a>
+      </div>
+      <div class="hr"></div>
+      <div class="muted">Server tự fit + pan 50 ➜ + crop. Ticker mặc định: OANDA:XAUUSD.</div>
+    </section>
+
+    <section class="card">
+      <h3>Tùy chỉnh</h3>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="seg" role="tablist" aria-label="Timeframe">
+          <button type="button" class="tf-btn" data-tf="M15" aria-pressed="false">M15</button>
+          <button type="button" class="tf-btn" data-tf="H1"  aria-pressed="true">H1</button>
+          <button type="button" class="tf-btn" data-tf="H4"  aria-pressed="false">H4</button>
+          <button type="button" class="tf-btn" data-tf="D"   aria-pressed="false">D1</button>
+        </div>
+      </div>
+
+      <form id="form">
+        <div class="grid">
+          <div>
+            <label for="tf">Timeframe</label>
+            <input id="tf" value="H1" />
+          </div>
+          <div>
+            <label for="ticker">Ticker</label>
+            <input id="ticker" value="OANDA:XAUUSD" />
+          </div>
+          <div>
+            <label for="w">Viewport width</label>
+            <input id="w" type="number" value="1440" min="320" />
+          </div>
+          <div>
+            <label for="h">Viewport height</label>
+            <input id="h" type="number" value="900" min="320" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnDownload" type="button">Tải PNG</button>
+          <button class="btn sec" id="btnCopy" type="button">Copy cURL</button>
+          <a class="btn ghost" id="btnOpen" href="#" rel="noopener">Mở tab mới</a>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="code" id="urlBox">URL sẽ hiển thị ở đây…</div>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h3>Ví dụ</h3>
+      <div class="muted">PowerShell</div>
+      <div class="code">Invoke-WebRequest "&lt;base&gt;/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD" -OutFile chart_h1.png</div>
+      <div class="muted" style="margin-top:8px">cURL</div>
+      <div class="code">curl "&lt;base&gt;/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD" --output chart_h1.png</div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const $ = id => document.getElementById(id);
+      const q = sel => document.querySelector(sel);
+      const qa = sel => Array.from(document.querySelectorAll(sel));
+
+      function buildUrl() {
+        const tf = ($('#tf').value || 'H1').toUpperCase();
+        const t  = ($('#ticker').value || '').trim();
+        const w  = Math.max(320, parseInt($('#w').value || '1440', 10));
+        const h  = Math.max(320, parseInt($('#h').value || '900', 10));
+        const p  = new URLSearchParams();
+        p.set('tf', tf);
+        p.set('w', String(w));
+        p.set('h', String(h));
+        if (t) p.set('ticker', t);
+        return `/capture?${p.toString()}`;
+      }
+
+      function updateUrlBox() {
+        const url = location.origin + buildUrl();
+        $('#urlBox').textContent = url;
+        return url;
+      }
+
+      async function copyCurl() {
+        const url = updateUrlBox();
+        const cmd = `curl "${url}" --output chart.png`;
+        try {
+          await navigator.clipboard.writeText(cmd);
+          $('#urlBox').textContent = 'Đã copy: ' + cmd;
+        } catch {
+          // Fallback: select text
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents($('#urlBox'));
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+
+      function openNew() {
+        const url = updateUrlBox();
+        window.open(url, '_blank', 'noopener');
+      }
+
+      function downloadPng() {
+        const url = updateUrlBox();
+        // chuyển trang để tải (Content-Disposition inline; người dùng có thể Save As)
+        window.location.href = url;
+      }
+
+      async function ping() {
+        const pill = $('#healthPill');
+        try {
+          const r = await fetch('/health', { cache: 'no-store' });
+          pill.innerHTML = `<span class="dot ${r.ok ? 'ok' : 'bad'}"></span> ${r.ok ? 'Sẵn sàng' : 'Không phản hồi'}`;
+        } catch {
+          pill.innerHTML = `<span class="dot bad"></span> Không phản hồi`;
+        }
+      }
+
+      // Bind events after DOM ready
+      document.addEventListener('DOMContentLoaded', () => {
+        // segmented TF -> input
+        qa('.tf-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            qa('.tf-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+            btn.setAttribute('aria-pressed', 'true');
+            $('#tf').value = btn.dataset.tf;
+            updateUrlBox();
+          });
+        });
+
+        // Input changes update preview
+        ['tf', 'ticker', 'w', 'h'].forEach(id => {
+          const el = $(id);
+          el.addEventListener('input', updateUrlBox);
+          el.addEventListener('change', updateUrlBox);
+        });
+
+        // Buttons
+        $('#btnCopy').addEventListener('click', (e) => { e.preventDefault(); copyCurl(); });
+        $('#btnOpen').addEventListener('click', (e) => { e.preventDefault(); openNew(); });
+        $('#btnDownload').addEventListener('click', (e) => { e.preventDefault(); downloadPng(); });
+
+        // Init
+        updateUrlBox();
+        ping();
+      });
+    })();
+  </script>
+</body>
+</html>
