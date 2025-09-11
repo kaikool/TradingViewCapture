@@ -16,9 +16,9 @@ const WS_ENDPOINT        = `wss://${BROWSERLESS_REGION}.browserless.io?token=${T
 
 // Cloudinary (HARDCODE)
 cloudinary.config({
-  cloud_name: "YOUR_CLOUD_NAME",
-  api_key:    "YOUR_API_KEY",
-  api_secret: "YOUR_API_SECRET",
+  cloud_name: "dxi9ensjq",
+  api_key:    "784331526282828",
+  api_secret: "9rbzDsR-tj87ao_NfDeX3lBoWPE",
 });
 
 const PORT = process.env.PORT || 8080;
