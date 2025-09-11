@@ -834,61 +834,68 @@
           </form>
         </div>
 
-       <!-- Examples Card -->
+       <!-- Examples Card (UPDATED for JSON secure_url) -->
         <div class="card">
           <div class="card-header">
             <div class="card-icon">💻</div>
             <div>
-              <h2 class="card-title">Ví Dụ Gọi API Từ App Khác</h2>
-              <div class="card-description">Cách tích hợp endpoint /capture trong web/app khác (ví dụ frontend host trên Firebase)</div>
+              <h2 class="card-title">Ví Dụ Gọi API T</h2>
+              <div class="card-description">
+                Endpoint <code>/capture</code> trả về JSON: <code>{ ok: true, url: "https://res.cloudinary.com/...", public_id: "..." }</code>.
+                Dùng <code>url</code> để hiển thị ảnh trực tiếp trong web/app của bạn.
+              </div>
             </div>
           </div>
         
-          <div class="code-label">JavaScript (Frontend, ví dụ React/Vue)</div>
+          <div class="code-label">JavaScript (Frontend: React/Vue/Vanilla)</div>
           <div class="code-block">
-            const url = "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD";
+        const api = "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture";
+        const params = new URLSearchParams({ tf: "H1", w: "1440", h: "900", ticker: "OANDA:XAUUSD" });
         
-            const res = await fetch(url);
-            if (res.ok) {
-              const blob = await res.blob();
-              const imgUrl = URL.createObjectURL(blob);
-              // Gắn vào thẻ &lt;img&gt; trong web app
-              document.getElementById("chart").src = imgUrl;
-            }
+        const res = await fetch(`${api}?${params}`, { mode: "cors" });
+        if (!res.ok) throw new Error("Capture failed");
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Upload failed");
+        
+        // Gắn link Cloudinary vào &lt;img id="chart"&gt;
+        document.getElementById("chart").src = data.url;
           </div>
         
           <div class="code-label">cURL (Terminal)</div>
           <div class="code-block">
-            curl -L "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD" -o chart.png
+        # Trả về JSON; dùng jq để lấy secure_url
+        curl -s "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD" | jq -r '.url'
+        # Hoặc lưu URL vào file:
+        # url=$(curl -s "..." | jq -r '.url'); echo "$url"
           </div>
         
           <div class="code-label">Python (requests)</div>
           <div class="code-block">
         import requests
         
-        url = "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture"
         params = {"tf": "H1", "w": 1440, "h": 900, "ticker": "OANDA:XAUUSD"}
+        r = requests.get("https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture", params=params)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("ok"):
+            raise RuntimeError(data.get("error", "Capture/Upload failed"))
         
-        res = requests.get(url, params=params)
-        if res.status_code == 200:
-            with open("chart.png", "wb") as f:
-                f.write(res.content)
-            print("Chart saved")
+        print("Cloudinary URL:", data["url"])  # dùng để hiển thị ảnh
           </div>
         
-          <div class="code-label">Node.js (Server-side)</div>
+          <div class="code-label">Node.js (Server-side / fetch)</div>
           <div class="code-block">
-        import fs from "fs";
-        import fetch from "node-fetch";
+        const params = new URLSearchParams({ tf: "H1", w: "1440", h: "900", ticker: "OANDA:XAUUSD" });
+        const resp = await fetch(`https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture?${params}`);
+        if (!resp.ok) throw new Error("Capture failed");
+        const json = await resp.json();
+        if (!json.ok) throw new Error(json.error || "Upload failed");
+        console.log("Cloudinary URL:", json.url);
+          </div>
         
-        const url = "https://tradingviewcapture-721483185057.asia-southeast1.run.app/capture?tf=H1&amp;w=1440&amp;h=900&amp;ticker=OANDA:XAUUSD";
-        
-        const res = await fetch(url);
-        if (res.ok) {
-          const buf = Buffer.from(await res.arrayBuffer());
-          fs.writeFileSync("chart.png", buf);
-          console.log("Chart saved!");
-        }
+          <div class="code-label">HTML hiển thị ảnh (placeholder)</div>
+          <div class="code-block">
+        &lt;img id="chart" alt="TradingView chart" style="max-width:100%;border-radius:12px;" /&gt;
           </div>
         </div>
 import requests
