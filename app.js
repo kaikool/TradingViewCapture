@@ -200,7 +200,7 @@ app.get("/capture", async (req, res) => {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     }
 
-    await page.waitForSelector("canvas[data-name='pane'], [data-name='pane']", { timeout: 15000 });
+ 
     await setTimeframeHotkey(page, tf);
     await new Promise(r => setTimeout(r, 800));
 
