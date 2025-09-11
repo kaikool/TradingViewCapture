@@ -20,11 +20,11 @@ const TF_MAP = {
   D: "D", W: "W", MN: "M",
 };
 
-// ==== Cloudinary config ====
+// ==== Cloudinary config hardcode ====
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: "dxi9ensjq",
+  api_key:    "784331526282828",
+  api_secret: "9rbzDsR-tj87ao_NfDeX3lBoWPE"
 });
 
 // ==== Helper ====
