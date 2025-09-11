@@ -181,10 +181,6 @@ app.get("/capture", async (req, res) => {
   const ticker = rawTicker !== "" ? rawTicker : DEFAULT_TICKER;
 
   let browser;
-  const ABORT_MS = 45_000;
-  const kill = setTimeout(() => {
-    try { res.status(504).json({ ok:false, error:"timeout" }); } catch {}
-  }, ABORT_MS);
 
   try {
     browser = await puppeteer.connect({ browserWSEndpoint: WS_ENDPOINT });
