@@ -219,8 +219,10 @@ app.get("/capture", async (req, res) => {
     const bufCrop = await screenshotChartRegion(page);
     const fname = formatFilename(ticker, tf);
 
+    // ép tải xuống
     res.setHeader("Content-Type", "image/png");
-    res.setHeader("Content-Disposition", `inline; filename="${fname}"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${fname}"`); // <-- đổi 'inline' thành 'attachment'
+    
     if (bufCrop) {
       res.send(bufCrop);
     } else {
