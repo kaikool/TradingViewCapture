@@ -13,6 +13,5 @@
     "cloudinary": "^1.41.2",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "puppeteer-core": "^22.15.0"
   }
 }
