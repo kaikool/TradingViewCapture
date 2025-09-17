@@ -7,7 +7,7 @@ import { dirname, join } from "path";
 
 // ====== HARDCODE ======
 // Browserless / TradingView
-const TOKEN              = "2SNEoq2by4gxiCk0a5f541b86a7b35f16883c01d0e808ed67"; // Browserless token
+const TOKEN              = "2T3pecgTuZd5bOCc222501c80fb1028904a85a373f3163dcd"; // Browserless token
 const TV_SESSIONID       = "o1hixcbxh1cvz59ri1u6d9juggsv9jko";                   // TradingView sessionid
 const CHART_ID           = "fCLTltqk";
 const DEFAULT_TICKER     = "OANDA:XAUUSD";
