@@ -16,7 +16,7 @@ const DEFAULT_TICKER     = "OANDA:XAUUSD";
 const BROWSERLESS_REGION = "production-sfo";
 const FN_ENDPOINT        = `https://${BROWSERLESS_REGION}.browserless.io/function?token=${TOKEN}`;
 
-// Cloudinary (HARDCODE — bạn nói đã hardcode sẵn, để nguyên block này)
+// Cloudinary (HARDCODE)
 cloudinary.config({
   cloud_name: "dxi9ensjq",
   api_key:    "784331526282828",
@@ -85,23 +85,22 @@ app.get("/capture", async (req, res) => {
 
   const interval = TF_MAP[tf] || "60";
 
-  // Code chạy TRÊN Browserless (có sẵn `page`, `context`)
+  // Code chạy TRÊN Browserless (function expression, KHÔNG dùng module.exports)
   const functionCode = `
-module.exports = async ({ page, context }) => {
+async ({ page, context }) => {
   const { tvSessionId, chartId, ticker, interval, width, height } = context;
 
   await page.setViewport({ width, height, deviceScaleFactor: 2 });
 
-  // Prime + set cookie
-  await page.goto('https://www.tradingview.com', { waitUntil: 'domcontentloaded' });
+  // Set cookie gắn với URL domain (không cần goto trước)
   await page.setCookie({
     name: 'sessionid',
     value: tvSessionId,
-    domain: '.tradingview.com',
+    url: 'https://www.tradingview.com',
     path: '/',
     httpOnly: true,
     secure: true,
-    sameSite: 'Lax',
+    sameSite: 'Lax'
   });
 
   const url = 'https://www.tradingview.com/chart/' + chartId +
@@ -154,7 +153,7 @@ module.exports = async ({ page, context }) => {
 
   const buf = await page.screenshot(clip ? { type: 'png', clip } : { type: 'png', fullPage: true });
   return { ok: true, screenshot: buf.toString('base64') };
-};
+}
   `.trim();
 
   try {
