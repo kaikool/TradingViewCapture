@@ -1,6 +1,8 @@
+// app.js — Browserless Function API (không cài puppeteer)
+// Serve /health, / và /capture (Browserless -> Cloudinary)
+
 import express from "express";
 import cors from "cors";
-import puppeteer from "puppeteer-core";
 import { v2 as cloudinary } from "cloudinary";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -12,13 +14,13 @@ const TV_SESSIONID       = "o1hixcbxh1cvz59ri1u6d9juggsv9jko";                  
 const CHART_ID           = "fCLTltqk";
 const DEFAULT_TICKER     = "OANDA:XAUUSD";
 const BROWSERLESS_REGION = "production-sfo";
-const WS_ENDPOINT        = `wss://${BROWSERLESS_REGION}.browserless.io?token=${TOKEN}`;
+const FN_ENDPOINT        = `https://${BROWSERLESS_REGION}.browserless.io/function?token=${TOKEN}`;
 
-// Cloudinary (HARDCODE)
+// Cloudinary (HARDCODE — bạn nói đã hardcode sẵn, để nguyên block này)
 cloudinary.config({
-  cloud_name: "YOUR_CLOUD_NAME",
-  api_key:    "YOUR_API_KEY",
-  api_secret: "YOUR_API_SECRET",
+  cloud_name: "dxi9ensjq",
+  api_key:    "784331526282828",
+  api_secret: "9rbzDsR-tj87ao_NfDeX3lBoWPE",
 });
 
 const PORT = process.env.PORT || 8080;
@@ -35,90 +37,13 @@ function clamp(v, min, max, d) {
   const n = Number.parseInt(v ?? d, 10);
   return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : d;
 }
-
-function buildUrl(chartId, ticker, tf) {
-  const interval = TF_MAP[(tf || "").toUpperCase()] || "60";
-  return `https://www.tradingview.com/chart/${chartId}/?symbol=${encodeURIComponent(ticker)}&interval=${interval}`;
-}
-
-async function setCookieAndPrime(page) {
-  await page.goto("https://www.tradingview.com", { waitUntil: "domcontentloaded" });
-  await page.setCookie({
-    name: "sessionid",
-    value: TV_SESSIONID,
-    domain: ".tradingview.com",
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-  });
-  await page.goto("https://www.tradingview.com", { waitUntil: "domcontentloaded" });
-}
-
-async function focusChart(page) {
-  const sels = [
-    "canvas[data-name='pane']",
-    "div[data-name='pane'] canvas",
-    "div[class*='chart-container'] canvas",
-    "canvas",
-    "body",
-  ];
-  for (const sel of sels) {
-    try {
-      const h = await page.$(sel);
-      if (h) { await h.click(); return; }
-    } catch {}
-  }
-}
-
-async function setTimeframeHotkey(page, tf) {
-  const interval = TF_MAP[(tf || "").toUpperCase()] || "60";
-  await focusChart(page);
-  if (["D", "W", "M"].includes(interval)) {
-    await page.keyboard.press(interval);
-  } else {
-    for (const ch of interval) await page.keyboard.type(ch);
-    await page.keyboard.press("Enter");
-  }
-}
-
-async function findChartContainer(page) {
-  const sels = [
-    "div[class*='chart-container']",
-    "[data-name='pane']",
-    "div[data-name='pane']",
-    "div[class*='chart-markup']",
-  ];
-  for (const sel of sels) {
-    const h = await page.$(sel);
-    if (h) return h;
-  }
-  return await page.$("canvas[data-name='pane']") || await page.$("canvas");
-}
-
-async function screenshotChartRegion(page) {
-  const el = await findChartContainer(page);
-  if (!el) return null;
-  await el.evaluate(e => e.scrollIntoView({ block: "center", inline: "center" }));
-  const box = await el.boundingBox();
-  if (!box) return null;
-  const pad = 2;
-  const clip = {
-    x: Math.max(0, box.x - pad),
-    y: Math.max(0, box.y - pad),
-    width: Math.max(1, box.width + pad * 2),
-    height: Math.max(1, box.height + pad * 2),
-  };
-  return await page.screenshot({ type: "png", clip });
-}
-
 function formatFilename(ticker, tf) {
   const now = new Date();
-  const dd   = String(now.getDate()).padStart(2, "0");
-  const mm   = String(now.getMonth() + 1).padStart(2, "0");
-  const yy   = String(now.getFullYear()).slice(-2);
-  const HH   = String(now.getHours()).padStart(2, "0");
-  const MM   = String(now.getMinutes()).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yy = String(now.getFullYear()).slice(-2);
+  const HH = String(now.getHours()).padStart(2, "0");
+  const MM = String(now.getMinutes()).padStart(2, "0");
   const symbol = ticker.includes(":") ? ticker.split(":")[1] : ticker;
   return `${dd}${mm}${yy}_${HH}${MM}_${symbol}_${tf.toUpperCase()}`;
 }
@@ -127,24 +52,29 @@ function formatFilename(ticker, tf) {
 const app = express();
 app.disable("x-powered-by");
 app.use(cors({ origin: "*" }));
+app.use(express.json({ limit: "1mb" }));
 
 // resolve __dirname (ESM)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 
-// Serve static (optional). Nếu muốn để html ở /public thì dùng dòng dưới:
+// (tuỳ chọn) phục vụ file tĩnh nếu bạn có /public
 // app.use(express.static(join(__dirname, "public")));
 
 app.get("/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// Trang chủ: trả index.html (đặt cùng thư mục với app.js)
+// Trang chủ: trả index.html nếu có cùng thư mục, không thì trả text
 app.get("/", (req, res) => {
-  res.sendFile(join(__dirname, "index.html"));
+  try {
+    res.sendFile(join(__dirname, "index.html"));
+  } catch {
+    res.type("text/plain").send("OK");
+  }
 });
 
-// Capture → Upload Cloudinary → trả JSON có secure_url
+// Capture → Browserless Function → Upload Cloudinary → trả JSON có secure_url
 app.get("/capture", async (req, res) => {
   const tfKey = (req.query.tf || "H1").toString().toUpperCase();
   const tf = TF_MAP[tfKey] ? tfKey : "H1";
@@ -153,55 +83,111 @@ app.get("/capture", async (req, res) => {
   const rawTicker = (req.query.ticker ?? "").toString().trim();
   const ticker = rawTicker !== "" ? rawTicker : DEFAULT_TICKER;
 
-  let browser;
+  const interval = TF_MAP[tf] || "60";
+
+  // Code chạy TRÊN Browserless (có sẵn `page`, `context`)
+  const functionCode = `
+module.exports = async ({ page, context }) => {
+  const { tvSessionId, chartId, ticker, interval, width, height } = context;
+
+  await page.setViewport({ width, height, deviceScaleFactor: 2 });
+
+  // Prime + set cookie
+  await page.goto('https://www.tradingview.com', { waitUntil: 'domcontentloaded' });
+  await page.setCookie({
+    name: 'sessionid',
+    value: tvSessionId,
+    domain: '.tradingview.com',
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Lax',
+  });
+
+  const url = 'https://www.tradingview.com/chart/' + chartId +
+              '/?symbol=' + encodeURIComponent(ticker) +
+              '&interval=' + interval;
 
   try {
-    browser = await puppeteer.connect({ browserWSEndpoint: WS_ENDPOINT });
-    const page = await browser.newPage();
-    await page.setViewport({ width: w, height: h, deviceScaleFactor: 2 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+  } catch {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  }
 
-    await setCookieAndPrime(page);
+  // Ẩn toolbar cho sạch ảnh
+  await page.addStyleTag({
+    content: '.layout__area--left, .drawingToolbar, .tv-floating-toolbar, [class*="drawingToolbar"], [class*="left-toolbar"] { display:none !important; }'
+  });
 
-    const url = buildUrl(CHART_ID, ticker, tf);
-    try {
-      await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-    } catch {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  // Tìm vùng chart để crop
+  const sels = [
+    'div[class*="chart-container"]',
+    '[data-name="pane"]',
+    'div[data-name="pane"]',
+    'div[class*="chart-markup"]',
+    'canvas[data-name="pane"]',
+    'canvas'
+  ];
+  let el = null;
+  for (const s of sels) { el = await page.$(s); if (el) break; }
+
+  let clip = null;
+  if (el) {
+    await el.evaluate(e => e.scrollIntoView({ block: 'center', inline: 'center' }));
+    const box = await el.boundingBox();
+    if (box) {
+      const pad = 2;
+      clip = {
+        x: Math.max(0, box.x - pad),
+        y: Math.max(0, box.y - pad),
+        width: Math.max(1, box.width + pad * 2),
+        height: Math.max(1, box.height + pad * 2),
+      };
     }
+  }
 
-    await setTimeframeHotkey(page, tf);
-    await new Promise(r => setTimeout(r, 800));
+  // Ẩn crosshair: di chuột ra ngoài vùng
+  try {
+    if (clip) await page.mouse.move(clip.x + clip.width + 8, clip.y + 8);
+    else await page.mouse.move(0, 0);
+  } catch {}
 
-    // Giấu toolbar trái etc.
-    await page.addStyleTag({
-      content: `
-        .layout__area--left, .drawingToolbar, .tv-floating-toolbar,
-        [class*="drawingToolbar"], [class*="left-toolbar"] {
-          display:none !important;
+  const buf = await page.screenshot(clip ? { type: 'png', clip } : { type: 'png', fullPage: true });
+  return { ok: true, screenshot: buf.toString('base64') };
+};
+  `.trim();
+
+  try {
+    const r = await fetch(FN_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        code: functionCode,
+        context: {
+          tvSessionId: TV_SESSIONID,
+          chartId: CHART_ID,
+          ticker,
+          interval,
+          width: w,
+          height: h,
         }
-      `
+      }),
     });
 
-    // Pan 50 nến sang phải
-    await focusChart(page);
-    for (let i = 0; i < 50; i++) {
-      try { await page.keyboard.press("ArrowRight"); } catch {}
-      await new Promise(r => setTimeout(r, 10));
+    const text = await r.text();
+    if (!r.ok) {
+      return res.status(r.status).json({ ok: false, error: `Browserless HTTP ${r.status}`, detail: text });
     }
 
-    // Ẩn crosshair
-    try {
-      const el = await findChartContainer(page);
-      const box = el && await el.boundingBox();
-      if (box) {
-        await page.mouse.move(box.x + box.width + 8, box.y + 8);
-      } else {
-        await page.mouse.move(0, 0);
-      }
-    } catch {}
+    let data;
+    try { data = JSON.parse(text); }
+    catch { return res.status(502).json({ ok: false, error: "Invalid JSON from Browserless", detail: text }); }
 
-    const bufCrop = await screenshotChartRegion(page);
-    const buf = bufCrop || await page.screenshot({ type: "png", fullPage: true });
+    if (!data?.ok || !data?.screenshot) {
+      return res.status(500).json({ ok: false, error: data?.error || "No screenshot in response", detail: data });
+    }
+
+    const buf = Buffer.from(data.screenshot, "base64");
     const fname = formatFilename(ticker, tf).replace(".png", "");
 
     // Upload Cloudinary
@@ -219,9 +205,6 @@ app.get("/capture", async (req, res) => {
       stream.end(buf);
     });
 
-    await page.close();
-    await browser.close();
-
     res.json({
       ok: true,
       url: uploaded.secure_url,
@@ -232,7 +215,6 @@ app.get("/capture", async (req, res) => {
     });
 
   } catch (e) {
-    try { if (browser) await browser.close(); } catch {}
     res.status(500).json({ ok:false, error: e?.message || String(e) });
   }
 });
