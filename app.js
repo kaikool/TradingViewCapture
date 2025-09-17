@@ -1,5 +1,5 @@
-// app.js — Browserless Function API (không cài puppeteer)
-// Serve /health, / và /capture (Browserless -> Cloudinary)
+// app.js — Browserless Function API (không cần puppeteer cục bộ)
+// Endpoint: /health và /capture (Browserless -> Cloudinary)
 
 import express from "express";
 import cors from "cors";
@@ -65,7 +65,7 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
-// Trang chủ: trả index.html nếu có cùng thư mục, không thì trả text
+// Trang chủ: trả index.html nếu có
 app.get("/", (req, res) => {
   try {
     res.sendFile(join(__dirname, "index.html"));
@@ -82,17 +82,16 @@ app.get("/capture", async (req, res) => {
   const h = clamp(req.query.h, 480, 1440, 900);
   const rawTicker = (req.query.ticker ?? "").toString().trim();
   const ticker = rawTicker !== "" ? rawTicker : DEFAULT_TICKER;
-
   const interval = TF_MAP[tf] || "60";
 
-  // Code chạy TRÊN Browserless (function expression, KHÔNG dùng module.exports)
+  // Code chạy TRÊN Browserless (wrap trong ngoặc để trả về function hợp lệ)
   const functionCode = `
-async ({ page, context }) => {
+(async ({ page, context }) => {
   const { tvSessionId, chartId, ticker, interval, width, height } = context;
 
   await page.setViewport({ width, height, deviceScaleFactor: 2 });
 
-  // Set cookie gắn với URL domain (không cần goto trước)
+  // Set cookie trước khi vào chart
   await page.setCookie({
     name: 'sessionid',
     value: tvSessionId,
@@ -113,7 +112,7 @@ async ({ page, context }) => {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   }
 
-  // Ẩn toolbar cho sạch ảnh
+  // Ẩn toolbar
   await page.addStyleTag({
     content: '.layout__area--left, .drawingToolbar, .tv-floating-toolbar, [class*="drawingToolbar"], [class*="left-toolbar"] { display:none !important; }'
   });
@@ -136,25 +135,17 @@ async ({ page, context }) => {
     const box = await el.boundingBox();
     if (box) {
       const pad = 2;
-      clip = {
-        x: Math.max(0, box.x - pad),
-        y: Math.max(0, box.y - pad),
-        width: Math.max(1, box.width + pad * 2),
-        height: Math.max(1, box.height + pad * 2),
-      };
+      clip = { x: Math.max(0, box.x - pad), y: Math.max(0, box.y - pad), width: Math.max(1, box.width + pad*2), height: Math.max(1, box.height + pad*2) };
     }
   }
 
-  // Ẩn crosshair: di chuột ra ngoài vùng
-  try {
-    if (clip) await page.mouse.move(clip.x + clip.width + 8, clip.y + 8);
-    else await page.mouse.move(0, 0);
-  } catch {}
+  // Ẩn crosshair
+  try { if (clip) await page.mouse.move(clip.x + clip.width + 8, clip.y + 8); else await page.mouse.move(0,0); } catch {}
 
-  const buf = await page.screenshot(clip ? { type: 'png', clip } : { type: 'png', fullPage: true });
-  return { ok: true, screenshot: buf.toString('base64') };
-}
-  `.trim();
+  const buf = await page.screenshot(clip ? { type:'png', clip } : { type:'png', fullPage:true });
+  return { ok:true, screenshot: buf.toString('base64') };
+})
+`.trim();
 
   try {
     const r = await fetch(FN_ENDPOINT, {
